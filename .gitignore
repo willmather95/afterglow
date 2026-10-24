@@ -5,3 +5,5 @@ evidence/
 .Codex/
 .DS_Store
 *.dSYM/
+
+windows/build/

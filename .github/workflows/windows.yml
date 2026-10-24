@@ -1,0 +1,45 @@
+name: Windows preview
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Compile, test and package native Windows app
+        shell: powershell
+        run: ./windows/Package.ps1
+      - name: Verify extracted app, rendering and overlay lifecycle
+        shell: powershell
+        run: ./windows/Test-Package.ps1
+      - name: Upload portable download
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: afterglow-windows-x64
+          path: |
+            windows/build/Afterglow-Windows-x64.zip
+            windows/build/Afterglow-Windows-x64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload native evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: afterglow-windows-evidence
+          path: |
+            windows/build/ui/
+            windows/build/tests.txt
+            windows/build/tests.stderr
+          if-no-files-found: warn
+          retention-days: 14
