@@ -85,7 +85,7 @@ struct MainView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             SunsetDial(warmth: (6500 - model.displayed.kelvin) / 3800, active: model.enabled)
-                .frame(width: 254, height: 180).accessibilityHidden(true)
+                .frame(width: 254, height: 240).accessibilityHidden(true)
         }
         .padding(.horizontal, 24).padding(.vertical, 12)
         .background(Palette.dark, in: RoundedRectangle(cornerRadius: 16))

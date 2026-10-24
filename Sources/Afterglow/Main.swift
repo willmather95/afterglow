@@ -92,6 +92,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
+        if let iconURL = Bundle.main.url(forResource: "Afterglow", withExtension: "icns"),
+           let icon = NSImage(contentsOf: iconURL) {
+            NSApp.applicationIconImage = icon
+        }
         buildMenus()
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 840),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
