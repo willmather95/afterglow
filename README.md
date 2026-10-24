@@ -1,28 +1,68 @@
 # Afterglow
 
-A local Mac menu-bar app for gentler nighttime viewing. Native SwiftUI/AppKit, with a low-glare interface inspired by 1980s hi-fi instruments. No third-party packages, network requests or telemetry.
+Make your Mac screen warmer and dimmer for a softer evening.
 
-## Start
+## Download Afterglow
 
-With macOS 14 or newer and a Swift 6 toolchain installed, clone this repository and run `./scripts/build.sh`. Then open `build/Afterglow.app`. The first launch is a preview and does not alter your display. Quit f.lux yourself and pause Night Shift before enabling. Tune Warmth and Extra dimming, then choose Enable comfort. While comfort is on, dragging a slider applies your adjustment immediately, including during scheduled daylight. In scheduled mode this live adjustment lasts about one minute, then returns to your saved bedtime schedule. Apply now starts the same preview; Resume schedule ends it early. The settings are saved on your Mac; activation is never saved.
+### [Download Afterglow for Mac](https://github.com/willmather95/afterglow/releases/download/v0.1.3/Afterglow-0.1.3-Mac.zip)
 
-Warmth uses an approximate white-point curve relative to the display's captured gamma table. Kelvin is not a measured calibration. Extra dimming is a black click-through layer, capped at 55 percent; it does not change hardware backlight brightness. Use your normal brightness keys too.
+Free. No account or Terminal commands needed.
 
-Switch on Ease into bedtime to set bedtime, wake time and a 30-180 minute evening fade. The morning return lasts 30 minutes. Times are local; event dates resolve through Calendar and fade progress uses elapsed seconds across DST changes. When comfort is disabled the schedule describes what would happen when enabled, not an active service.
+**You need:** a Mac with an Apple M-series chip and macOS Sonoma (14) or newer. To check, click the Apple menu in the top-left corner of your screen, then **About This Mac**. This download does not work on Intel Macs, Windows PCs, iPhones or iPads.
 
-The sun button switches between low-glare and paper appearance. The menu-bar icon fills while comfort is active and changes to an alert symbol if restoration needs attention.
+## Install it
 
-## Restore
+1. Click **Download Afterglow for Mac** above.
+2. Open **Downloads** in Finder. Double-click **Afterglow-0.1.3-Mac.zip** to unpack it. If you already see the Afterglow app, it is unpacked.
+3. Drag **Afterglow** into **Applications** in the Finder sidebar.
+4. Open **Applications**, then double-click **Afterglow**, the orange sunset icon.
 
-- Use Restore original or Turn off in the window.
-- Use Restore original colors from the menu bar.
-- Press Shift-Command-0 while Afterglow is active.
-- Use Control-Option-Command-R globally if registration succeeded. The app shows the fallback if the shortcut is unavailable.
-- Quit normally to restore and remove dimming.
+You do not need GitHub's green **Code** button or either **Source code** download.
 
-Closing the main window keeps the app in the menu bar. If comfort was enabled, the app restores original colors for display/system sleep, then automatically resumes after the wake notifications and display configuration settle. It captures a fresh baseline and computes the current schedule, including daylight after your wake time. Turn off, Restore, emergency restore or Quit cancels pending resume. A standalone display configuration change, f.lux conflict or recovery error still pauses safely for manual attention. Cold launch stays inactive. There is no login item and no background installation.
+### If your Mac stops it from opening
 
-A separate child process holds the captured color tables. An unexpected parent exit closes its pipe and triggers restoration. Normal restoration disarms the child before a new session can begin. Helper failure stops further writes and attempts restoration. Failed restoration shows Retry Restore rather than claiming the screen is unchanged. Disconnected displays cannot be verified; connected displays are restored and the limitation remains visible. A simultaneous external gamma controller, display driver failure, shutdown or failure of both processes can exceed these protections.
+This is an early version. It has not been notarized by Apple, so your Mac may say it cannot verify the developer or check the app for harmful software.
+
+If you downloaded it from the link above and choose to open it:
+
+1. Try opening Afterglow once, then dismiss the warning.
+2. Open the Apple menu > **System Settings** > **Privacy & Security**.
+3. Scroll to the message about Afterglow and click **Open Anyway**.
+4. Confirm that you want to open Afterglow. Your Mac may ask for your password or Touch ID.
+
+[Apple's guide to opening downloaded apps](https://support.apple.com/en-us/102445) explains this check. If your Mac says the app contains malware or will damage your computer, leave it closed.
+
+## Make your screen comfortable
+
+1. If you use f.lux or Night Shift, turn them off first.
+2. Open Afterglow and click **Enable comfort**. Your screen stays unchanged until you enable it.
+3. Move **Warmth** toward **Candlelit** for a warmer screen. Move **Extra dimming** toward **Low light** for a darker screen.
+
+Want your usual screen back? Click **Restore original** or **Turn off**.
+
+### Follow your bedtime
+
+Turn on **Ease into bedtime**, then choose your bedtime and wake-up time. **Fade in** is how long the screen takes to warm up before bedtime.
+
+During the day, the screen stays at its usual color. Click **Apply now** to try your evening setting for about a minute. Moving a slider while comfort is on also starts this preview. **Resume schedule** ends the preview early.
+
+For warmth that stays on right now, turn **Ease into bedtime** off and leave comfort enabled.
+
+### Next time you use your Mac
+
+- Closing the window keeps Afterglow running. Click its sun icon at the top of your screen to reopen it.
+- If comfort is on when your Mac sleeps, Afterglow resumes after waking with your current setting or bedtime schedule.
+- After quitting Afterglow or restarting your Mac, open it from **Applications** and click **Enable comfort** again. It does not start automatically.
+- To keep the icon in your Dock, right-click it while the app is running and choose **Options > Keep in Dock**.
+
+## Privacy and cost
+
+Afterglow runs on your Mac. It sends no data, has no account and has no subscription. It is free and open source under the MIT license.
+
+Warmth is an approximate color adjustment, not a calibrated display setting. Extra dimming adds a dark layer; your normal screen-brightness keys still work. Afterglow makes no medical or sleep-treatment claims.
+
+<details>
+<summary>For developers: build, tests and technical details</summary>
 
 ## Build and verify
 
@@ -53,6 +93,15 @@ Automated evidence can establish calculations, native panel properties, API read
 
 The app uses documented CoreGraphics APIs. REA informed the investigation approach; no f.lux code was copied or incorporated. No system preferences, protected infrastructure or existing apps were modified.
 
-## Open-source license
 
-MIT. This is an independent personal display utility, not affiliated with f.lux or Apple. Source and tests are open; physical appearance depends on the display and other color controls. It makes no medical or sleep-treatment claim.
+### Display restoration
+
+The app captures original display color tables before enabling comfort and restores them when you turn it off, quit, or sleep. A separate helper attempts restoration if the app crashes. Failed restoration shows Retry Restore. Disconnected displays and other apps changing color settings can limit restoration; the app reports these conditions rather than claiming success.
+
+The app uses documented CoreGraphics APIs. No f.lux code was copied or incorporated. No third-party packages are required. This project is independent of f.lux and Apple.
+
+</details>
+
+## License
+
+[MIT](LICENSE). Copyright 2026 Will Mather.
