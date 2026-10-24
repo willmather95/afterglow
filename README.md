@@ -1,6 +1,6 @@
 # Afterglow
 
-Make your Mac screen warmer and dimmer for a softer evening.
+A warmer, dimmer screen for a softer evening. Available for Mac and Windows.
 
 ## Download Afterglow
 
@@ -10,7 +10,21 @@ Free. No account or Terminal commands needed.
 
 **You need:** a Mac with an Apple M-series chip and macOS Sonoma (14) or newer. To check, click the Apple menu in the top-left corner of your screen, then **About This Mac**. This download does not work on Intel Macs, Windows PCs, iPhones or iPads.
 
-## Install it
+### [Download Afterglow for Windows](https://github.com/willmather95/afterglow/releases/download/windows-v0.1.0/Afterglow-Windows-x64.zip)
+
+For Windows 11 on a 64-bit Intel or AMD PC. Free. No account, Terminal or administrator permission needed.
+
+1. Right-click the downloaded **Afterglow-Windows-x64.zip** and choose **Extract All**.
+2. Open the extracted folder and double-click **Afterglow.exe**, the sunset icon.
+3. Click **Enable comfort**. Adjust **Warmth** and **Extra dimming**, or turn on **Ease into bedtime**.
+
+Closing the window keeps Afterglow beside the clock in the system tray. Open the app again to reopen its controls. **Restore original** removes the effect; **Quit** stops the app. It does not install automatic startup.
+
+The Windows preview adds an amber tint using desktop overlays. It does not change Windows Night light or display calibration. It follows the bedtime schedule while running and handles Windows sleep/wake notifications. Physical sleep/wake, HDR, pointer behavior and mixed-monitor testing remain separate device checks. See the [Windows guide](windows/README.md).
+
+This preview is unsigned. Windows or a work computer may block it. Use your organization's approved process if that happens.
+
+## Install on a Mac
 
 1. Click **Download Afterglow for Mac** above.
 2. Open **Downloads** in Finder. Double-click **Afterglow-0.1.3-Mac.zip** to unpack it. If you already see the Afterglow app, it is unpacked.
@@ -32,7 +46,7 @@ If you downloaded it from the link above and choose to open it:
 
 [Apple's guide to opening downloaded apps](https://support.apple.com/en-us/102445) explains this check. If your Mac says the app contains malware or will damage your computer, leave it closed.
 
-## Make your screen comfortable
+## Make your Mac screen comfortable
 
 1. If you use f.lux or Night Shift, turn them off first.
 2. Open Afterglow and click **Enable comfort**. Your screen stays unchanged until you enable it.
@@ -57,7 +71,7 @@ For warmth that stays on right now, turn **Ease into bedtime** off and leave com
 
 ## Privacy and cost
 
-Afterglow runs on your Mac. It sends no data, has no account and has no subscription. It is free and open source under the MIT license.
+Afterglow runs on your computer. It sends no data, has no account and has no subscription. It is free and open source under the MIT license.
 
 Warmth is an approximate color adjustment, not a calibrated display setting. Extra dimming adds a dark layer; your normal screen-brightness keys still work. Afterglow makes no medical or sleep-treatment claims.
 

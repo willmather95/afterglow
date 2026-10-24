@@ -26,6 +26,8 @@ This early preview is unsigned. If Windows or your work computer blocks it, use 
 - Quit from the tray menu to stop completely. After quitting or restarting your PC, open Afterglow and enable comfort again. It does not install automatic startup.
 - While the app remains open, enabled comfort resumes after system/display sleep or unlocking and follows the current schedule. Display changes wait briefly before rebuilding the effect for connected screens.
 
+If you change Windows High Contrast while Afterglow is running, quit and reopen it to refresh the colors.
+
 ## What the Windows effect does
 
 This version uses click-through desktop overlays. Warmth is a tint, not a calibrated white point, and does not change Windows Night light, your graphics driver, hardware brightness or display calibration. It sends no data and makes no medical or sleep-benefit claims.
