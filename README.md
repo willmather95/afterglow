@@ -20,7 +20,7 @@ For Windows 11 on a 64-bit Intel or AMD PC. Free. No account, Terminal or admini
 
 Closing the window keeps Afterglow beside the clock in the system tray. Open the app again to reopen its controls. **Restore original** removes the effect; **Quit** stops the app. It does not install automatic startup.
 
-The Windows preview adds an amber tint using desktop overlays. It does not change Windows Night light or display calibration. It follows the bedtime schedule while running and handles Windows sleep/wake notifications. Physical sleep/wake, HDR, pointer behavior and mixed-monitor testing remain separate device checks. See the [Windows guide](windows/README.md).
+The Windows preview adds an amber tint using desktop overlays. It does not change Windows Night light or display calibration. It follows the bedtime schedule while running and handles Windows sleep/wake notifications when available. Physical sleep/wake, HDR, pointer behavior and mixed-monitor testing remain separate device checks. See the [Windows guide](windows/README.md).
 
 This preview is unsigned. Windows or a work computer may block it. Use your organization's approved process if that happens.
 

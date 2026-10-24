@@ -24,7 +24,7 @@ This early preview is unsigned. If Windows or your work computer blocks it, use 
 - Restore original removes the effect immediately. Ctrl+Alt+Shift+R also restores if the shortcut was available at startup.
 - Closing the window keeps Afterglow running in the system tray beside the clock. Double-click its sun icon to reopen it; it may be under the small hidden-icons arrow. Open the app again to reopen its controls too.
 - Quit from the tray menu to stop completely. After quitting or restarting your PC, open Afterglow and enable comfort again. It does not install automatic startup.
-- While the app remains open, enabled comfort resumes after system/display sleep or unlocking and follows the current schedule. Display changes wait briefly before rebuilding the effect for connected screens.
+- While the app remains open and sleep tracking is available, enabled comfort resumes after system/display sleep or unlocking and follows the current schedule. If Windows cannot provide sleep tracking, Afterglow shows a warning and you must re-enable comfort manually. Display changes wait briefly before rebuilding the effect for connected screens.
 
 If you change Windows High Contrast while Afterglow is running, quit and reopen it to refresh the colors.
 
