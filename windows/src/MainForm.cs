@@ -262,7 +262,10 @@ namespace Afterglow.Windows
                 if(!form.status.Visible||!form.values.Visible)throw new InvalidOperationException("Native render observer has hidden controls.");
                 foreach(int width in new int[]{700,600})
                 {
-                    form.ClientSize=new Size(width,800);form.PerformLayout();
+                    form.ClientSize=new Size(width,Math.Min(800,Screen.PrimaryScreen.WorkingArea.Height-80));Application.DoEvents();form.PerformLayout();
+                    File.AppendAllText(Path.Combine(directory,"layout.txt"),String.Format("window={0} client={1} hint={2} visible={3}\n",form.Size,form.ClientSize,form.restoreHint.Bounds,form.restoreHint.Visible));
+                    Rectangle hintBounds=form.RectangleToClient(form.restoreHint.RectangleToScreen(form.restoreHint.ClientRectangle));
+                    if(!form.restoreHint.Visible||!form.ClientRectangle.Contains(hintBounds))throw new InvalidOperationException("Restore hint clipped in native layout.");
                     using(Bitmap image=new Bitmap(form.Width,form.Height))
                     {form.DrawToBitmap(image,new Rectangle(0,0,form.Width,form.Height));image.Save(Path.Combine(directory,"afterglow-"+width+".png"));}
                 }
