@@ -47,6 +47,7 @@ namespace Afterglow.Windows
             ComfortIntent intent=new ComfortIntent();Check(!intent.Active,"cold start inactive");intent.Enable();intent.Adjust(true,At(12,0));
             intent.Sleep(SleepSource.System);intent.Sleep(SleepSource.Display);intent.Wake(SleepSource.Display);
             Check(!intent.Active&&intent.Enabled&&!intent.PreviewUntil.HasValue,"sleep preserves intent and clears preview");
+            intent.Enable();intent.Adjust(true,At(12,0));Check(!intent.Active,"apply now cannot clear missing system wake");
             intent.Wake(SleepSource.System);Check(intent.Active,"all wake sources resume");
             intent.Sleep(SleepSource.Lock);intent.Restore();intent.Wake(SleepSource.Lock);Check(!intent.Active,"manual off cancels resume");
             intent.Enable();intent.Adjust(true,At(12,0));intent.ResumeSchedule();Check(!intent.PreviewUntil.HasValue,"resume schedule clears preview");

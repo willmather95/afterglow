@@ -128,7 +128,7 @@ namespace Afterglow.Windows
         internal SleepSource Blocked { get; private set; }
         internal DateTimeOffset? PreviewUntil { get; private set; }
         internal bool Active { get { return Enabled && Blocked == SleepSource.None; } }
-        internal void Enable() { Enabled = true; Blocked = SleepSource.None; PreviewUntil = null; }
+        internal void Enable() { Enabled = true; PreviewUntil = null; }
         internal void Restore() { Enabled = false; PreviewUntil = null; }
         internal void Adjust(bool scheduled, DateTimeOffset now)
         { if (Active && scheduled) PreviewUntil = now.AddMinutes(1); }

@@ -51,7 +51,7 @@ namespace Afterglow.Windows
         private readonly ComfortIntent intent = new ComfortIntent();
         private readonly OverlaySession overlays = new OverlaySession();
         private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
-        private readonly Label status, values, note;
+        private readonly Label status, values, note, restoreHint;
         private readonly Button enable, preview;
         private readonly TrackBar warmth, dimming;
         private readonly CheckBox scheduled;
@@ -59,7 +59,8 @@ namespace Afterglow.Windows
         private readonly NumericUpDown fade;
         private readonly NotifyIcon tray;
         private bool initializing = true, quitting, hotkey;
-        private string persistenceWarning;
+        private string persistenceWarning, capabilityWarning;
+        private bool powerNotificationsAvailable = true;
         private DateTimeOffset settleUntil;
         private IntPtr powerRegistration;
         private static readonly Guid DisplayPower = new Guid("2B84C20E-AD23-4DDF-93DB-05FFBD7EFCA5");
@@ -72,7 +73,7 @@ namespace Afterglow.Windows
             if (!smoke) try { settings = SettingsStore.Load(settingsPath); }
                 catch (Exception exception)
                 {
-                    if (!(exception is IOException || exception is UnauthorizedAccessException || exception is SerializationException || exception is ArgumentException)) throw;
+                    if (!(exception is InvalidDataException || exception is IOException || exception is UnauthorizedAccessException || exception is SerializationException || exception is ArgumentException)) throw;
                     persistenceWarning = "Saved settings could not be loaded. Adjust a control to save a new setting.";
                 }
             Text = "Afterglow"; AccessibleName = "Afterglow screen comfort";
@@ -89,7 +90,7 @@ namespace Afterglow.Windows
             enable = Theme.Button("Enable comfort"); enable.Click += delegate { if (intent.Enabled) Restore(); else Enable(); };
             Button restore = Theme.Button("Restore original"); restore.Click += delegate { Restore(); };
             actions.Controls.Add(enable); actions.Controls.Add(restore);
-            Label restoreHint = Theme.Text("Emergency restore: Ctrl+Alt+Shift+R",Font,Theme.Muted); restoreHint.Dock=DockStyle.Bottom;
+            restoreHint = Theme.Text("Restore original is always available above.",Font,Theme.Muted); restoreHint.Dock=DockStyle.Bottom;
             footer.Controls.Add(actions); footer.Controls.Add(status); footer.Controls.Add(restoreHint);
 
             Panel scroll = new Panel { Dock=DockStyle.Fill, AutoScroll=true, Padding=new Padding(24) };
@@ -145,11 +146,17 @@ namespace Afterglow.Windows
             base.OnLoad(e); if(smoke)return;
             hotkey=Native.RegisterHotKey(Handle,0xAF10,0x4007,0x52);
             Guid guid=DisplayPower;powerRegistration=Native.RegisterPowerSettingNotification(Handle,ref guid,0);
-            if(!hotkey) persistenceWarning="Emergency shortcut unavailable. Use Restore original or the tray menu.";
-            if(powerRegistration==IntPtr.Zero) persistenceWarning="Display-sleep notifications unavailable. After sleep, check Afterglow before relying on automatic resume.";
+            ConfigureCapabilities(hotkey,powerRegistration!=IntPtr.Zero);
             SystemEvents.DisplaySettingsChanging+=DisplayChanging;SystemEvents.DisplaySettingsChanged+=DisplayChanged;
             SystemEvents.SessionSwitch+=SessionChanged;SystemEvents.TimeChanged+=ClockChanged;
             RefreshComfort();
+        }
+        private void ConfigureCapabilities(bool shortcutAvailable,bool displayNotifications)
+        {
+            powerNotificationsAvailable=displayNotifications;
+            restoreHint.Text=shortcutAvailable?"Emergency restore: Ctrl+Alt+Shift+R":"Shortcut unavailable. Use Restore original or the tray menu.";
+            capabilityWarning=shortcutAvailable?null:"Emergency shortcut unavailable.";
+            if(!displayNotifications)capabilityWarning=(capabilityWarning==null?"":capabilityWarning+" ")+"Display sleep tracking unavailable; automatic resume is disabled.";
         }
         private void SettingsChanged(object sender,EventArgs e)
         {
@@ -159,7 +166,7 @@ namespace Afterglow.Windows
             intent.ResumeSchedule();
             if(sender==warmth || sender==dimming)intent.Adjust(settings.Scheduled,DateTimeOffset.UtcNow);
             if(!smoke) try { SettingsStore.Save(settingsPath,settings);persistenceWarning=null; }
-                catch(Exception error) { if(!(error is IOException || error is UnauthorizedAccessException || error is SerializationException))throw;persistenceWarning=error is InvalidDataException?error.Message:"Your setting could not be saved. It only applies to this session."; }
+                catch(Exception error) { if(!(error is InvalidDataException || error is IOException || error is UnauthorizedAccessException || error is SerializationException))throw;persistenceWarning=error is InvalidDataException?error.Message:"Your setting could not be saved. It only applies to this session."; }
             RefreshComfort();
         }
         private void Enable()
@@ -201,10 +208,11 @@ namespace Afterglow.Windows
             }
             status.Text=phase;status.AccessibleName="Comfort status: "+phase;
             tray.Text=("Afterglow: "+phase).Length>63?"Afterglow: needs attention":"Afterglow: "+phase;
-            note.Text=persistenceWarning??(intent.PreviewUntil.HasValue&&intent.PreviewUntil.Value>now?"Applied now. Your schedule resumes in about one minute.":intent.Enabled?"Following your setting. Restore removes the overlay immediately.":"Choose Enable comfort. Your screen is unchanged.");
+            string transientNote=persistenceWarning??(intent.PreviewUntil.HasValue&&intent.PreviewUntil.Value>now?"Applied now. Your schedule resumes in about one minute.":intent.Enabled?"Following your setting. Restore removes the overlay immediately.":"Choose Enable comfort. Your screen is unchanged.");
+            note.Text=(String.IsNullOrEmpty(capabilityWarning)?"":capabilityWarning+"\n")+transientNote;
         }
         private void OnUI(Action action) {if(!IsDisposed&&IsHandleCreated)BeginInvoke(new Action(delegate {if(!IsDisposed)action();}));}
-        private void Sleep(SleepSource source) {intent.Sleep(source);overlays.Clear();RefreshComfort();}
+        private void Sleep(SleepSource source) {intent.Sleep(source);if(!powerNotificationsAvailable)intent.Restore();overlays.Clear();RefreshComfort();}
         private void Wake(SleepSource source) {intent.Wake(source);settleUntil=DateTimeOffset.UtcNow.AddSeconds(2);RefreshComfort();}
         private void DisplayChanging(object sender,EventArgs e) {OnUI(delegate {overlays.Clear();settleUntil=DateTimeOffset.MaxValue;});}
         private void DisplayChanged(object sender,EventArgs e) {OnUI(delegate {overlays.Clear();settleUntil=DateTimeOffset.UtcNow.AddSeconds(2);RefreshComfort();});}
@@ -250,13 +258,19 @@ namespace Afterglow.Windows
             Directory.CreateDirectory(directory);
             using(MainForm form=new MainForm(true))
             {
-                form.CreateControl();form.PerformLayout();
+                form.CreateControl();form.Show();Application.DoEvents();form.PerformLayout();
+                if(!form.status.Visible||!form.values.Visible)throw new InvalidOperationException("Native render observer has hidden controls.");
                 foreach(int width in new int[]{700,600})
                 {
                     form.ClientSize=new Size(width,800);form.PerformLayout();
-                    using(Bitmap image=new Bitmap(form.ClientSize.Width,form.ClientSize.Height))
-                    {form.DrawToBitmap(image,form.ClientRectangle);image.Save(Path.Combine(directory,"afterglow-"+width+".png"));}
+                    using(Bitmap image=new Bitmap(form.Width,form.Height))
+                    {form.DrawToBitmap(image,new Rectangle(0,0,form.Width,form.Height));image.Save(Path.Combine(directory,"afterglow-"+width+".png"));}
                 }
+                form.ConfigureCapabilities(false,false);form.warmth.Value=60;
+                if(!form.note.Text.Contains("shortcut unavailable")||!form.note.Text.Contains("automatic resume is disabled")||form.restoreHint.Text.Contains("Ctrl+Alt+Shift+R"))throw new InvalidOperationException("Capability warning was hidden by a setting change.");
+                form.bedtime.Value=DateTime.Today.AddHours(23);form.wake.Value=DateTime.Today.AddHours(1);form.scheduled.Checked=true;
+                if(form.enable.Enabled||form.intent.Enabled)throw new InvalidOperationException("Invalid sleep window did not fail closed.");
+                form.wake.Value=DateTime.Today.AddHours(7);form.ConfigureCapabilities(true,true);
                 form.Enable();form.warmth.Value=70;form.scheduled.Checked=true;form.intent.Adjust(true,DateTimeOffset.UtcNow);form.RefreshComfort();
                 if(form.overlays.Count!=0)throw new InvalidOperationException("UI smoke must not tint the desktop.");
                 form.intent.Sleep(SleepSource.System);form.intent.Sleep(SleepSource.Display);form.intent.Wake(SleepSource.Display);

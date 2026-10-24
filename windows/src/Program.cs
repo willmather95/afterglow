@@ -63,7 +63,7 @@ namespace Afterglow.Windows
                 if(session.Count!=Screen.AllScreens.Length||!session.VerifyNativeStyles())throw new InvalidOperationException("Native overlay style check failed");
                 session.Clear();if(session.Count!=0)throw new InvalidOperationException("Overlay removal failed");
             }
-            File.WriteAllText(Path.Combine(directory,"overlay-smoke.txt"),"PASS real native layered/click-through/no-activate windows, one per display; removed after test. Physical appearance not tested.");
+            File.WriteAllText(Path.Combine(directory,"overlay-smoke.txt"),"PASS real native layered windows with click-through/no-activate style flags, one per display; removed after test. Physical appearance not tested.");
             return 0;
         }
         private static int OverlayFixture(string output)
