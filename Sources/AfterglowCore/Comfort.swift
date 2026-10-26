@@ -40,7 +40,7 @@ public struct ComfortOutput: Equatable, Sendable {
 }
 
 public enum ComfortSchedule {
-    /// A short live adjustment never changes the saved bedtime schedule.
+    /// An explicit now override never changes the saved bedtime schedule.
     public static func effectiveOutput(settings: ComfortSettings, date: Date, previewUntil: Date?, calendar: Calendar = .current) -> ComfortOutput {
         if settings.scheduled, settings.scheduleIsValid, let end = previewUntil, date < end {
             var manual = settings; manual.scheduled = false
@@ -82,6 +82,11 @@ public enum ComfortSchedule {
                       matchingPolicy: .nextTime, repeatedTimePolicy: .first), wake > bed else { return nil }
             return (bed, wake)
         }
+    }
+    public static func nextWake(settings raw: ComfortSettings, date: Date, calendar: Calendar = .current) -> Date? {
+        let s = raw.normalized
+        guard s.scheduled, s.scheduleIsValid else { return nil }
+        return intervals(settings: s, near: date, calendar: calendar).map(\.1).filter { $0 > date }.min()
     }
     public static func nextTransition(settings raw: ComfortSettings, date: Date, calendar: Calendar = .current) -> (Date, String)? {
         let s = raw.normalized

@@ -61,6 +61,25 @@ struct ComfortTests {
         state.restorationFinished(confirmed: false)
         expectFalse(state.canResume)
     }
+    func testNowLastsUntilNextWakeAndHandlesDST() throws {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = try require(TimeZone(identifier: "America/Chicago"))
+        let iso = ISO8601DateFormatter()
+        let settings = ComfortSettings(kelvin: 3200, dimming: 0.2, scheduled: true)
+        for (start, wake) in [("2026-10-26T17:00:00Z", "2026-10-27T12:00:00Z"),
+                              ("2026-03-07T18:00:00Z", "2026-03-08T12:00:00Z"),
+                              ("2026-10-31T17:00:00Z", "2026-11-01T13:00:00Z")] {
+            let now = try require(iso.date(from: start)), expected = try require(iso.date(from: wake))
+            let end = try require(ComfortSchedule.nextWake(settings: settings, date: now, calendar: cal))
+            expectEqual(end, expected)
+            let later = ComfortSchedule.effectiveOutput(settings: settings, date: now.addingTimeInterval(120), previewUntil: end, calendar: cal)
+            expectEqual(later.kelvin, 3200); expectEqual(later.dimming, 0.2)
+            expectEqual(ComfortSchedule.effectiveOutput(settings: settings, date: end, previewUntil: end, calendar: cal), .neutral)
+        }
+        let now = try require(iso.date(from: "2026-10-27T12:00:00Z"))
+        expectEqual(ComfortSchedule.nextWake(settings: settings, date: now, calendar: cal), iso.date(from: "2026-10-28T12:00:00Z"))
+        expectEqual(ComfortSchedule.nextWake(settings: ComfortSettings(scheduled: true, bedtime: 0, wake: 60), date: now, calendar: cal), nil)
+    }
     func testLiveAdjustmentIsTemporaryAndPreservesSchedule() throws {
         var cal = Calendar(identifier: .gregorian); cal.timeZone = try require(TimeZone(identifier: "America/Chicago"))
         let now = try require(ISO8601DateFormatter().date(from: "2026-10-24T17:00:00Z"))
@@ -245,6 +264,7 @@ private func require<T>(_ value: T?) throws -> T {
     static func main() {
         let checks = ComfortTests()
         let tests: [(String, () throws -> Void)] = [
+            ("now lasts to next wake across DST", checks.testNowLastsUntilNextWakeAndHandlesDST),
             ("live adjustment expires without changing schedule", checks.testLiveAdjustmentIsTemporaryAndPreservesSchedule),
             ("unconfirmed restoration cancels resume", checks.testUnconfirmedRestorationCancelsWakeAndKeepsOff),
             ("sleep and wake streams", checks.testWakeIntentHandlesBothStreamsAndDuplicateSleep),

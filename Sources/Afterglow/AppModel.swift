@@ -6,7 +6,12 @@ import AfterglowCore
 final class AppModel: ObservableObject {
     @Published var settings: ComfortSettings {
         didSet {
-            if oldValue.scheduled != settings.scheduled { previewUntil = nil }
+            if oldValue.scheduled != settings.scheduled {
+                previewUntil = enabled && settings.scheduled ? ComfortSchedule.nextWake(settings: settings, date: Date()) : nil
+            }
+            else if oldValue.wake != settings.wake, previewUntil != nil {
+                previewUntil = ComfortSchedule.nextWake(settings: settings, date: Date())
+            }
             do { defaults.set(try JSONEncoder().encode(settings.normalized), forKey: "comfortSettings") }
             catch { errorMessage = "Your settings could not be saved." }
             refresh()
@@ -14,6 +19,7 @@ final class AppModel: ObservableObject {
     }
     @Published private(set) var enabled = false
     @Published private(set) var recoveryPending = false
+    @Published private(set) var restorationUnconfirmed = false
     @Published private(set) var waitingForWake = false
     @Published private(set) var previewUntil: Date?
     @Published var emergencyShortcutAvailable = true
@@ -23,7 +29,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var output = ComfortOutput.neutral
     @Published private(set) var clock = Date()
     @Published var errorMessage: String?
-    @Published private(set) var notice = "Your display is unchanged. Adjust your evening setting, then enable."
+    @Published private(set) var notice = "Turn on now applies your chosen warmth immediately."
     let isPreview: Bool
     private let defaults: UserDefaults
     private let engine = DisplayEngine()
@@ -77,6 +83,22 @@ final class AppModel: ObservableObject {
                 })
         }
     }
+    // Synthetic UI states never acquire a display session or change real settings.
+    func configurePreview(_ state: String, dimming: Double = 0.11) {
+        guard isPreview else { return }
+        settings = ComfortSettings(kelvin: state == "neutral" ? 6500 : 5000, dimming: min(0.55, max(0, dimming)), scheduled: state != "off")
+        enabled = state == "on" || state == "waiting" || state == "neutral"
+        previewUntil = state == "on" || state == "neutral" ? ComfortSchedule.nextWake(settings: settings, date: clock) : nil
+        output = state == "waiting" ? .neutral : ComfortSchedule.effectiveOutput(settings: settings, date: clock, previewUntil: previewUntil)
+        if state == "unconfirmed" {
+            restorationUnconfirmed = true
+            notice = "Connected displays restored. A disconnected display could not be checked. Extra dimming is off."
+        }
+        if state == "error" {
+            recoveryPending = true
+            errorMessage = "A display disconnected before its colors could be restored. Reconnect it, then choose Retry Restore."
+        }
+    }
     var displayed: ComfortOutput {
         enabled ? output : .init(kelvin: settings.kelvin, dimming: settings.dimming, phase: "Evening preview", fraction: 1)
     }
@@ -88,7 +110,34 @@ final class AppModel: ObservableObject {
     var scheduleError: String? {
         settings.scheduled && !settings.scheduleIsValid ? "Choose a sleep window between 4 and 14 hours." : nil
     }
-    var statusTitle: String { recoveryPending ? "Restoration needs attention" : waitingForWake ? "Resumes after wake" : enabled ? output.phase : "Ready when you are" }
+    var isScheduledWaiting: Bool { enabled && settings.scheduled && !isLiveAdjustment && output.fraction == 0 }
+    var statusTitle: String {
+        if recoveryPending { return "Restore needs attention" }
+        if restorationUnconfirmed { return "A display could not be checked" }
+        if waitingForWake { return "Paused for sleep" }
+        if !enabled { return "Off" }
+        if isScheduledWaiting { return "Waiting for bedtime schedule" }
+        if output.kelvin >= 6499 { return output.dimming > 0 ? "Dimming on · warmth off" : "Original screen settings" }
+        return isLiveAdjustment || !settings.scheduled ? "Blue-light reduction on now" : "Blue-light reduction · scheduled"
+    }
+    var statusDetail: String {
+        if recoveryPending { return "Restore original colors before turning on again." }
+        if restorationUnconfirmed {
+            return enabled ? "Your current setting is on. An earlier disconnected display's original colors remain unconfirmed." : notice
+        }
+        if waitingForWake { return "Your setting resumes automatically after waking." }
+        if !enabled { return notice }
+        if isScheduledWaiting { return "Starts at \(timeLabel(fadeStart)). Choose Turn on now to apply it sooner." }
+        if output.kelvin >= 6499 { return "Move Blue-light reduction toward More for a warmer screen." }
+        if isLiveAdjustment, let end = previewUntil {
+            return "Applied until your next wake time, \(end.formatted(date: .omitted, time: .shortened)). Choose Follow schedule to return sooner."
+        }
+        return settings.scheduled ? "\(output.phase). Returns to normal by \(timeLabel(settings.wake))." : "Your chosen setting stays on until you turn it off."
+    }
+    var scheduleExplanation: String {
+        if settings.kelvin >= 6499 && settings.dimming == 0 { return "Choose warmer colors or extra dimming to give this schedule an effect." }
+        return "Starts \(settings.kelvin >= 6499 ? "dimming" : "warming") at \(timeLabel(fadeStart)), reaches your setting at \(timeLabel(settings.bedtime)), and returns to normal by \(timeLabel(settings.wake))."
+    }
     var dimmingPercent: Int { Int((settings.dimming * 100).rounded()) }
     var formattedKelvin: String { String(Int((settings.kelvin / 50).rounded()) * 50) }
     var isLiveAdjustment: Bool { settings.scheduled && (previewUntil.map { $0 > clock } ?? false) }
@@ -96,8 +145,8 @@ final class AppModel: ObservableObject {
     func adjustDimming(_ value: Double) { beginLiveAdjustment(); settings.dimming = value }
     private func beginLiveAdjustment() {
         guard enabled, settings.scheduled, !recoveryPending, !waitingForWake else { return }
-        previewUntil = Date().addingTimeInterval(60)
-        notice = "Your adjustment is applied now. The bedtime schedule resumes in about one minute."
+        previewUntil = ComfortSchedule.nextWake(settings: settings, date: Date())
+        notice = "Your setting is applied now until your next wake time."
     }
     func previewSetting() {
         guard !isPreview, !recoveryPending, !waitingForWake else { return }
@@ -107,6 +156,7 @@ final class AppModel: ObservableObject {
     }
     func resumeSchedule() {
         previewUntil = nil
+        if !enabled { enable(applyNow: false) }
         if enabled { notice = "Following your bedtime schedule." }
         refresh()
     }
@@ -133,8 +183,8 @@ final class AppModel: ObservableObject {
     func toggle() {
         if enabled || waitingForWake || recoveryPending || engine.hasBaseline { restore() } else { enable() }
     }
-    func enable() {
-        guard !isPreview else { return }
+    func enable(applyNow: Bool = true) {
+        guard !isPreview, !recoveryPending else { return }
         guard !sleepState.isSleeping else {
             notice = "Your display is sleeping. Comfort resumes after wake if it was on."
             return
@@ -154,6 +204,7 @@ final class AppModel: ObservableObject {
                 self?.restore()
                 if self?.recoveryPending == false { self?.notice = message }
             }
+            if applyNow { previewUntil = settings.scheduled ? ComfortSchedule.nextWake(settings: settings, date: Date()) : nil }
             enabled = true; recoveryPending = false; lastTarget = nil
             notice = "Comfort is on. Restore returns your captured colors immediately."
             refresh()
@@ -169,15 +220,18 @@ final class AppModel: ObservableObject {
         do {
             let disconnected = try engine.restore()
             recoveryPending = false
+            // An empty/no-op restore cannot prove an earlier disconnected display was restored.
+            restorationUnconfirmed = restorationUnconfirmed || !disconnected.isEmpty
             errorMessage = nil
-            notice = disconnected.isEmpty ? "Original colors restored. Extra dimming is off." :
-                "Connected displays restored. A disconnected display could not be checked. Extra dimming is off."
-            return disconnected.isEmpty
+            notice = restorationUnconfirmed ?
+                "An earlier disconnected display's original colors remain unconfirmed. Extra dimming is off." :
+                "Original colors restored. Extra dimming is off."
+            return !restorationUnconfirmed
         } catch { recoveryPending = engine.hasBaseline; errorMessage = error.localizedDescription; return false }
     }
     func handleSleep(_ source: WakeResumeState.Source) {
         guard !isPreview else { return }
-        previewUntil = nil
+        // Keep a still-valid Turn on now deadline across sleep. Restore cancels it explicitly.
         wakeTimer?.invalidate(); wakeTimer = nil
         wakeGraceDeadline = 0
         sleepState.sleep(source, wasEnabled: enabled)
@@ -242,7 +296,7 @@ final class AppModel: ObservableObject {
         // enable() reruns conflicts/schedule checks and refreshes from Date(),
         // rather than replaying the output that was active before sleep.
         let settlingUntil = wakeGraceDeadline
-        enable()
+        enable(applyNow: false)
         if enabled {
             wakeGraceDeadline = settlingUntil
             notice = "Comfort resumed after wake and is following your current setting."
@@ -263,7 +317,7 @@ final class AppModel: ObservableObject {
         if waitingForWake, let error = scheduleError {
             restore(); errorMessage = error; return
         }
-        guard enabled else { return }
+        guard enabled, !isPreview else { return }
         if fluxRunning { pauseForSystemChange("f.lux opened. Afterglow restored your settings and paused."); return }
         if let error = scheduleError { restore(); errorMessage = error; return }
         guard engine.guardianIsAlive else {

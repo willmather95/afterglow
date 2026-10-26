@@ -1,10 +1,10 @@
 # Afterglow
 
-A warmer, dimmer screen for a softer evening. Available for Mac and Windows.
+Your day was bright enough. Afterglow softens a harsh evening screen with warmer colors, extra dimming and a gradual bedtime schedule. Available for Mac and Windows.
 
 ## Download Afterglow
 
-### [Download Afterglow for Mac](https://github.com/willmather95/afterglow/releases/download/v0.1.3/Afterglow-0.1.3-Mac.zip)
+### [Download Afterglow for Mac](https://github.com/willmather95/afterglow/releases/download/v0.1.4/Afterglow-0.1.4-Mac.zip)
 
 Free. No account or Terminal commands needed.
 
@@ -27,7 +27,7 @@ This preview is unsigned. Windows or a work computer may block it. Use your orga
 ## Install on a Mac
 
 1. Click **Download Afterglow for Mac** above.
-2. Open **Downloads** in Finder. Double-click **Afterglow-0.1.3-Mac.zip** to unpack it. If you already see the Afterglow app, it is unpacked.
+2. Open **Downloads** in Finder. Double-click **Afterglow-0.1.4-Mac.zip** to unpack it. If you already see the Afterglow app, it is unpacked.
 3. Drag **Afterglow** into **Applications** in the Finder sidebar.
 4. Open **Applications**, then double-click **Afterglow**, the orange sunset icon.
 
@@ -49,25 +49,25 @@ If you downloaded it from the link above and choose to open it:
 ## Make your Mac screen comfortable
 
 1. If you use f.lux or Night Shift, turn them off first.
-2. Open Afterglow and click **Enable comfort**. Your screen stays unchanged until you enable it.
-3. Move **Warmth** toward **Candlelit** for a warmer screen. Move **Extra dimming** toward **Low light** for a darker screen.
+2. Open Afterglow and click **Turn on now**. Your chosen warmth and dimming apply immediately.
+3. Move **Blue-light reduction** right for warmer colors. Move **Extra dimming** right for a darker screen.
 
 Want your usual screen back? Click **Restore original** or **Turn off**.
 
 ### Follow your bedtime
 
-Turn on **Ease into bedtime**, then choose your bedtime and wake-up time. **Fade in** is how long the screen takes to warm up before bedtime.
+Turn on **Bedtime schedule**, then choose your bedtime and wake-up time. **Start before bedtime** controls how early the screen begins gradually warming. For a 23:00 bedtime and 90 minutes, warming starts at 21:30 and reaches your chosen setting at 23:00.
 
-During the day, the screen stays at its usual color. Click **Apply now** to try your evening setting for about a minute. Moving a slider while comfort is on also starts this preview. **Resume schedule** ends the preview early.
+**Turn on now** applies your chosen setting immediately, even during the day. With the schedule enabled, that setting stays on until your next wake time. Choose **Follow schedule** to return to automatic timing sooner. When the app is waiting for the evening start time, it says so.
 
-For warmth that stays on right now, turn **Ease into bedtime** off and leave comfort enabled.
+With **Bedtime schedule** off, your selected setting stays on until you choose **Turn off** or **Restore original**.
 
 ### Next time you use your Mac
 
 - Closing the window keeps Afterglow running. Click its sun icon at the top of your screen to reopen it.
 - If comfort is on when your Mac sleeps, Afterglow resumes after waking with your current setting or bedtime schedule.
-- After quitting Afterglow or restarting your Mac, open it from **Applications** and click **Enable comfort** again. It does not start automatically.
-- To keep the icon in your Dock, right-click it while the app is running and choose **Options > Keep in Dock**.
+- After quitting Afterglow or restarting your Mac, open it from **Applications** and click **Turn on now** again. It does not start automatically.
+- The Mac app lives in the sunset menu bar icon. Open **Settings** there whenever you want to adjust it.
 
 ## Privacy and cost
 
@@ -119,3 +119,9 @@ The app uses documented CoreGraphics APIs. No f.lux code was copied or incorpora
 ## License
 
 [MIT](LICENSE). Copyright 2026 Will Mather.
+
+### Menu bar controls
+
+Afterglow lives in the sunset icon at the top of your screen, without a Dock icon. Click it to turn your setting on or off, toggle your bedtime schedule, restore original colors, or open Settings. Closing Settings keeps Afterglow running. Quit restores your original colors and exits. Afterglow starts off; choose Turn on now or Bedtime schedule when you want it active.
+
+In the sunset menu, **Bedtime schedule** is checked while Afterglow is following your schedule. Click it to restore your screen and stop the schedule; click it again to resume. Your saved bedtime and wake-up times stay the same.

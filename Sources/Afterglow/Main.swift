@@ -73,19 +73,23 @@ struct AfterglowMain {
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
-        app.setActivationPolicy(.regular)
+        app.setActivationPolicy(.accessory)
         app.run()
         withExtendedLifetime(delegate) {}
     }
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
     static weak var shared: AppDelegate?
-    let preview = CommandLine.arguments.contains("--render-preview")
+    let preview = CommandLine.arguments.contains("--render-preview") || CommandLine.arguments.contains("--preview-window") || CommandLine.arguments.contains("--exercise-menu")
     lazy var model = AppModel(preview: preview)
     var window: NSWindow!
     private var statusItem: NSStatusItem?
+    var quickToggle: NSMenuItem?
+    var scheduleItem: NSMenuItem?
+    var restoreItem: NSMenuItem?
+    var stateItem: NSMenuItem?
     private var hotKey: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
     private var statusSubscription: AnyCancellable?
@@ -97,24 +101,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             NSApp.applicationIconImage = icon
         }
         buildMenus()
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 840),
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 680),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                           backing: .buffered, defer: false)
         window.title = "Afterglow"
         window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
         NSApp.appearance = NSAppearance(named: model.darkInterface ? .darkAqua : .aqua)
         window.backgroundColor = .windowBackgroundColor
-        window.minSize = NSSize(width: 640, height: 740)
+        window.contentMinSize = NSSize(width: 640, height: 660)
+        window.contentMaxSize = NSSize(width: 820, height: 760)
         window.isReleasedWhenClosed = false; window.delegate = self
         window.contentView = NSHostingView(rootView: MainView(model: model).padding(.top, 12).background(Palette.paper))
-        window.center(); showWindow()
+        window.center()
+        // First launch explains the controls. Later launches stay in the menu bar.
+        if preview || CommandLine.arguments.contains("--show-settings") || !UserDefaults.standard.bool(forKey: "hasShownSettings") {
+            showWindow()
+            if !preview { UserDefaults.standard.set(true, forKey: "hasShownSettings") }
+        }
         if !preview { registerEmergencyShortcut() }
+        if CommandLine.arguments.contains("--exercise-menu") {
+            DispatchQueue.main.async { [weak self] in self?.exerciseMenu() }
+        }
         if CommandLine.arguments.contains("--exercise-app") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.exerciseApp() }
         }
         if CommandLine.arguments.contains("--paper") { model.darkInterface = false }
         if CommandLine.arguments.contains("--schedule") { model.settings.scheduled = true }
-        if CommandLine.arguments.contains("--compact") { window.setContentSize(NSSize(width: 640, height: 720)) }
+        if preview, let index = CommandLine.arguments.firstIndex(of: "--preview-state"), index + 1 < CommandLine.arguments.count {
+            let dimmingIndex = CommandLine.arguments.firstIndex(of: "--preview-dimming")
+            let dimming = dimmingIndex.flatMap { $0 + 1 < CommandLine.arguments.count ? Double(CommandLine.arguments[$0 + 1]) : nil } ?? 0.11
+            model.configurePreview(CommandLine.arguments[index + 1], dimming: dimming)
+        }
+        if CommandLine.arguments.contains("--compact") { window.setContentSize(NSSize(width: 640, height: 660)) }
         if preview, let index = CommandLine.arguments.firstIndex(of: "--render-preview"), index + 1 < CommandLine.arguments.count {
             let path = CommandLine.arguments[index + 1]
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in self?.renderPreview(path: path) }
@@ -140,8 +158,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         status.button?.image = NSImage(systemSymbolName: "sun.horizon", accessibilityDescription: "Afterglow display comfort")
         status.button?.toolTip = "Afterglow"
         let menu = NSMenu()
-        menu.addItem(item("Show Afterglow", action: #selector(showWindow)))
-        menu.addItem(item("Restore original colors", action: #selector(restoreColors)))
+        menu.autoenablesItems = false
+        menu.delegate = self
+        let summary = NSMenuItem(title: model.statusTitle, action: nil, keyEquivalent: "")
+        summary.isEnabled = false
+        stateItem = summary; menu.addItem(summary)
+        let toggle = item("Turn on now", action: #selector(toggleFromMenu))
+        quickToggle = toggle; menu.addItem(toggle)
+        let schedule = item("Bedtime schedule", action: #selector(toggleBedtimeSchedule))
+        scheduleItem = schedule; menu.addItem(schedule)
+        menu.addItem(.separator())
+        menu.addItem(item("Settings…", action: #selector(showWindow)))
+        let restore = item("Restore original colors", action: #selector(restoreColors))
+        restoreItem = restore; menu.addItem(restore)
         menu.addItem(.separator())
         menu.addItem(item("Quit Afterglow", action: #selector(quitApp)))
         status.menu = menu; statusItem = status
@@ -155,8 +184,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let result = NSMenuItem(title: title, action: action, keyEquivalent: key)
         result.target = self; return result
     }
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        stateItem?.title = model.errorMessage ?? model.statusTitle
+        let on = model.enabled || model.waitingForWake
+        quickToggle?.title = model.recoveryPending ? "Retry restoration" : on ? "Turn off" : "Turn on now"
+        quickToggle?.state = on ? .on : .off
+        quickToggle?.isEnabled = !model.isPreview && (on || model.recoveryPending || model.scheduleError == nil)
+        scheduleItem?.state = model.enabled && model.settings.scheduled && !model.isLiveAdjustment ? .on : .off
+        scheduleItem?.isEnabled = !model.isPreview && !model.recoveryPending && !model.waitingForWake && model.scheduleError == nil
+        restoreItem?.isEnabled = on || model.recoveryPending
+    }
+    @objc func toggleFromMenu() {
+        model.toggle()
+        if model.errorMessage != nil || model.recoveryPending { showWindow() }
+    }
+    @objc private func toggleBedtimeSchedule() {
+        if model.enabled && model.settings.scheduled && !model.isLiveAdjustment {
+            model.restore()
+        } else {
+            model.settings.scheduled = true
+            model.resumeSchedule()
+        }
+        if model.errorMessage != nil || model.recoveryPending { showWindow() }
+    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     @objc func showWindow() { window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) }
-    @objc func restoreColors() { model.restore() }
+    @objc func restoreColors() {
+        model.restore()
+        if model.errorMessage != nil || model.recoveryPending { showWindow() }
+    }
     @objc func quitApp() { NSApp.terminate(nil) }
     private func registerEmergencyShortcut() {
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
